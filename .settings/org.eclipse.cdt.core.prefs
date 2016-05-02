@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.1949949390/PATH/delimiter=\:
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.1949949390/PATH/operation=replace
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.1949949390/PATH/value=/usr/local/gcc-arm-none-eabi-4_9-2014q4/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/usr/games\:/usr/local/games
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.1949949390/append=true
+environment/project/ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.1949949390/appendContributed=true
