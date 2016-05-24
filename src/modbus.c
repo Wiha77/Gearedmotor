@@ -30,40 +30,7 @@ void net_tx2(UART_DATA *uart)
 // **************************************************************************
 void USART2_IRQHandler(void)
 {
-	//Receive Data register not empty interrupt
-  	if(USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
-   {
-  		 USART_ClearITPendingBit(USART2, USART_IT_RXNE);
-  		uart2.rxtimer=0;
-
-  			if(uart2.rxcnt>(BUF_SZ-2))
-  			uart2.rxcnt=0;
-
-  		 	uart2.buffer[uart2.rxcnt++]=USART_ReceiveData (USART2);
-
-
-   }
-
-  	//Transmission complete interrupt
-    if(USART_GetITStatus(USART2, USART_IT_TC) != RESET)
-  	{
-
-  		USART_ClearITPendingBit(USART2, USART_IT_TC);
-  		  if(uart2.txcnt<uart2.txlen)
-  		{
-  			USART_SendData(USART2,uart2.buffer[uart2.txcnt++]);
-  		}
-  		 else
-  		{
-  		 uart2.txlen=0;
-
-  		 GPIO_ResetBits(GPIOA,GPIO_Pin_4);
-  		 USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
-  		 USART_ITConfig(USART2, USART_IT_TC, DISABLE);
-  		 TIM_ITConfig(TIM7,TIM_IT_Update,ENABLE);
-  		}
-  	}
-
+	USART_IRQ(&uart2);
 }
 
 //***************************************************************************
@@ -71,15 +38,8 @@ void USART2_IRQHandler(void)
 //***************************************************************************
 void TIM7_IRQHandler(void)
 {
+	USART_TIMER_IRQ(&uart2);
 	TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
-
-
-
-	   if((uart2.rxtimer++>uart2.delay)&(uart2.rxcnt>1))
-	   uart2.rxgap=1;
-	   else
-	   uart2.rxgap=0;
-
 }
 
 //***************************************************************************
@@ -103,59 +63,7 @@ void main_modbus(void)
 }
 
 
-/***************************************************************************//**
- * @brief Init USART2
- ******************************************************************************/
 
-//********************************************************************************************
-
-void SetupUSART2(void)
-{
-
-
-
-    //timer 0.0001sec one symbol on 9600 ~1ms
-    uart2.delay=3; //modbus gap
-
-
-
-	  USART_InitTypeDef USART_InitStructure;
-	/* USART2 configuration ------------------------------------------------------*/
-	  /* USART2 configured as follow:
-	        - BaudRate = 115200 baud
-	        - Word Length = 8 Bits
-	        - One Stop Bit
-	        - No parity
-	        - Hardware flow control disabled (RTS and CTS signals)
-	        - Receive and transmit enabled
-	        - USART Clock disabled
-	        - USART CPOL: Clock is active low
-	        - USART CPHA: Data is captured on the middle
-	        - USART LastBit: The clock pulse of the last data bit is not output to
-	                         the SCLK pin
-	  */
-	  USART_InitStructure.USART_BaudRate = 115200;
-	  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	  USART_InitStructure.USART_Parity = USART_Parity_No;
-	  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-
-	  USART_Init(USART2, &USART_InitStructure);
-
-	  /* Enable USART2 */
-	  USART_Cmd(USART2, ENABLE);
-	  GPIO_ResetBits(GPIOA,GPIO_Pin_4);
-	  USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
-
-
-
-
-
-
-}
-
-//*******************************************************
 
 
 
@@ -175,11 +83,11 @@ void SetupUSART2(void)
 
 
      //recive and checking rx query
-	if((MODBUS->buffer[0]!=0)&(MODBUS->rxcnt>5)& ((MODBUS->buffer[0]==SET_PAR[0])|(MODBUS->buffer[0]==255)))
+	if((MODBUS->rx_buffer[0]!=0)&(MODBUS->rxcnt>5)& ((MODBUS->rx_buffer[0]==*modbus_addr)|(MODBUS->rx_buffer[0]==255)))
  {
-	  tmp=Crc16(MODBUS->buffer,MODBUS->rxcnt-2);
+	  tmp=Crc16(MODBUS->rx_buffer,MODBUS->rxcnt-2);
 
-     if((MODBUS->buffer[MODBUS->rxcnt-2]==(tmp&0x00FF)) & (MODBUS->buffer[MODBUS->rxcnt-1]==(tmp>>8)))
+     if((MODBUS->rx_buffer[MODBUS->rxcnt-2]==(tmp&0x00FF)) & (MODBUS->rx_buffer[MODBUS->rxcnt-1]==(tmp>>8)))
     {
 
 

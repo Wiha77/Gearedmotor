@@ -9,7 +9,6 @@
 #include "misc.h"
 #include "eeprom.h"
 #include "modbus.h"
-#include "onewire.h"
 #include "stm32f10x_iwdg.h"
 #include "stm32f10x_dbgmcu.h"
 #define MyDebug 1
@@ -30,3 +29,12 @@ void usart_init(void);
 void TestWriteVarEEPROM(unsigned int);
 void FatallError (void);
 void StopMotor (void);
+
+/*CHIP RESOURSES
+ * MODBUS:
+ * TIM7_IRQHandler
+ * USART2_IRQHandler
+ *delay_ms:
+ * TIM6
+ */
+ */
