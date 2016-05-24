@@ -1,6 +1,6 @@
 #include "main.h"
 
-extern  int res_table[OBJ_SZ];
+extern  int16_t res_table[OBJ_SZ];
 #define  	MaxChangSpeed 300 //максимальное изменение скорости без перестарта ПИД
 #define  	ConstWaitForced 500 //Время грубого разгона в мС
 #define  	TimeFuseNoTurn   1000 //Время защиты от остановки якоря
@@ -24,8 +24,12 @@ uint16_t VirtAddVarTab[NumbOfVar]={
 		 MBReg_PID_MaxPWM,
 		 MBReg_PID_MinPWM,
 		 MBReg_PID_MaxTurns,
-		 MBReg_PID_MinTurns
-		 ,38};
+		 MBReg_PID_MinTurns,
+		 MBReg_PID_KickTurns,
+		 MBReg_PID_KickPWM,
+		 MBReg_PID_PWM_zerro,
+		 MBReg_PID_PWM_gain
+		 };
 
 
 
@@ -120,8 +124,7 @@ GPIO_InitTypeDef PORT;
 uint16_t PID_PreMatch (int16_t Turns)
 {
 	uint16_t Rezultat;
-	if(Turns>PID_MaxTurns)Turns=PID_MaxTurns;
-	if(Turns<PID_MinTurns)Turns=PID_MinTurns;
+
 	Rezultat=(uint32_t)(Turns-PID_MinTurns)*(uint32_t)(PID_MaxPWM-PID_MinPWM)/(PID_MaxTurns-PID_MinTurns)+PID_MinPWM;
 
 	return Rezultat;
@@ -160,15 +163,15 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 	Примечание:  параметр t_step  можно исключить из повторяющихся вычислений заранее скорректировав коэффициенты  Ki и Kd  в  t_step  раз.
 	*****************************************************************************/
 	int temp;
-	//если был старт или резкое изменение установки скорости то разгоняемся по грубой прикидке
-
+	//если был старт то включаем кик старт
+/* */
 	if(MotorSpeedTemp>MotorSpeed)temp=MotorSpeedTemp-MotorSpeed;
 	else temp=MotorSpeed-MotorSpeedTemp;
 	if((FLAGS&FLAGS_StartMotor)||(temp>MaxChangSpeed))
 	{
 		//начало разгона по грубой прикидке
 		FLAGS&=~FLAGS_StartMotor;
-		WaitForced=ConstWaitForced;
+		WaitForced=res_table[MBReg_PID_KickTurns];
 		FLAGS|=FLAGS_MotorFors;
 		PIDintegral=0;
 	}
@@ -177,10 +180,16 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 	if(WaitForced)
 		{
 		//грубый разгон
-		MotorSpeedPWM=PID_PreMatch (MotorSpeed);
-		PWM_about=MotorSpeedPWM;
+		MotorSpeedPWM=res_table[MBReg_PID_KickPWM];
+
 		return;
 		}
+	//вычисляем PWM пропорционально установке скорости
+	if(MotorSpeed>PID_MaxTurns)MotorSpeed=PID_MaxTurns;
+	if(MotorSpeed<PID_MinTurns)MotorSpeed=PID_MinTurns;
+
+	PWM_about=res_table[MBReg_PID_PWM_gain]*MotorSpeed/1024+res_table[MBReg_PID_PWM_zerro];
+
 	if(FLAGS&FLAGS_MotorFors)
 			{
 			//здесь защита от заклинивания
@@ -196,14 +205,12 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 
 	PIDerr = MotorSpeed-PIDrp; //текущая ошибка
 	//ограничиваем ошибку
-	if(PIDerr<0)temp=-PIDerr;
-	else temp=PIDerr;
-	if (temp>PIDMaxErr)temp=PIDMaxErr;
-	if(PIDerr<0)PIDerr=-temp;
-	else PIDerr=temp;
+	if((PIDerr>0) && (PIDerr>PIDMaxErr))PIDerr=PIDMaxErr;
+	if((PIDerr<0) && (PIDerr<(0-PIDMaxErr)))PIDerr=-PIDMaxErr;
+
    //интеграл ошибки
-	if ((PIDerr >0)&(MotorSpeedPWM<MaxPWM))PIDintegral+=PIDerr;
-	if ((PIDerr <0)&(MotorSpeedPWM>MinPWM))PIDintegral+=PIDerr;
+	if ((PIDerr >0)&&(MotorSpeedPWM<MaxPWM))PIDintegral+=PIDerr;
+	if ((PIDerr <0)&&(MotorSpeedPWM>MinPWM))PIDintegral+=PIDerr;
 
 
 
@@ -806,6 +813,10 @@ void InitVariable(void)
 	    		 if (EE_WriteVariable(MBReg_PID_MinPWM, MinPWM)!= FLASH_COMPLETE )FatallError ();
 	    		 if (EE_WriteVariable(MBReg_PID_MaxTurns, 2500)!= FLASH_COMPLETE )FatallError ();
 	    		 if (EE_WriteVariable(MBReg_PID_MinTurns, 100)!= FLASH_COMPLETE )FatallError ();
+	    		 if (EE_WriteVariable(MBReg_PID_KickTurns, 0)!= FLASH_COMPLETE )FatallError ();
+	    		 if (EE_WriteVariable(MBReg_PID_KickPWM, 0)!= FLASH_COMPLETE )FatallError ();
+	    		 if (EE_WriteVariable(MBReg_PID_PWM_zerro, 0)!= FLASH_COMPLETE )FatallError ();
+	    		 if (EE_WriteVariable(MBReg_PID_PWM_gain, 0)!= FLASH_COMPLETE )FatallError ();
 
 	    	  }
 
@@ -838,6 +849,14 @@ void InitVariable(void)
 				res_table[MBReg_PID_MaxTurns]=TempVar;
 			EE_ReadVariable(MBReg_PID_MinTurns,&TempVar);
 				res_table[MBReg_PID_MinTurns]=TempVar;
+			EE_ReadVariable(MBReg_PID_KickTurns,&TempVar);
+				res_table[MBReg_PID_KickTurns]=TempVar;
+			EE_ReadVariable(MBReg_PID_KickPWM,&TempVar);
+				res_table[MBReg_PID_KickPWM]=TempVar;
+			EE_ReadVariable(MBReg_PID_PWM_zerro,&TempVar);
+				res_table[MBReg_PID_PWM_zerro]=TempVar;
+			EE_ReadVariable(MBReg_PID_PWM_gain,&TempVar);
+				res_table[MBReg_PID_PWM_gain]=TempVar;
 
 
 
@@ -1015,6 +1034,7 @@ int main(void) {
 	StateFlags|=StateFlag_Reset; // Установим флаг перезапуска программы
 
 // инициализация сторожевого таймера
+	/**/
 	IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
 	IWDG_SetPrescaler(IWDG_Prescaler_4);
 	IWDG_SetReload(0xfff);
@@ -1028,12 +1048,12 @@ int main(void) {
     	TestMotorCurrent();
     	RunsCommands();
     	RequestSonar();
-    	//Sensor_Up=ADC1->JDR4*1.71;
-    	Sensor_Up=ADC1->JDR3;
-    	Densor_Imotor=((int)(ADC1->JDR3)-Cur_zero_offset)*Cur_gain/800;
+    	Sensor_Up=ADC1->JDR4*1.71;
+    	//Sensor_Up=ADC1->JDR3;
+    	Densor_Imotor=((int)(ADC1->JDR3)-Cur_zero_offset)*Cur_gain/200; //divided on 200 because there's sold 4 wires
     	if (Densor_Imotor<10)Densor_Imotor=0;
 		//delay_ms(1);
-		IWDG_ReloadCounter(); //сброс сторожевого таймера
+	IWDG_ReloadCounter(); //сброс сторожевого таймера
 
 
 	}

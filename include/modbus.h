@@ -13,7 +13,7 @@
 unsigned char SET_PAR[SETUP];
 
 
- int res_table[OBJ_SZ];
+int16_t res_table[OBJ_SZ];
 //OBJECT ARRAY WHERE READING AND WRITING OCCURS
  typedef enum
  {
@@ -45,7 +45,12 @@ unsigned char SET_PAR[SETUP];
  MBReg_PID_MaxPWM,
  MBReg_PID_MinPWM,
  MBReg_PID_MaxTurns,
- MBReg_PID_MinTurns
+ MBReg_PID_MinTurns,
+ MBReg_PID_KickTurns,
+ MBReg_PID_KickPWM,
+ MBReg_PID_PWM_zerro,
+ MBReg_PID_PWM_gain
+
  }NumberRegModbas;
 
 #define proporc         	res_table[MBReg_proporc] //вычисленная пророрциональная состовляющая ПИД регулятора
