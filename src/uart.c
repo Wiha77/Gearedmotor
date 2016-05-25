@@ -5,13 +5,13 @@
 //dummy
 //***************************************************************************
 
-void uart_dummy(UART_DATA *uart) {
+void uart_dummy(void *uart) {
 
 }
 //***************************************************************************
 // *  UART init
 // **************************************************************************
-void USART_Init(UART_DATA *uart) {
+void USART_Initial(UART_DATA *uart) {
 	USART_Init(uart->usart, &uart->usart_param);
 	USART_Cmd(uart->usart, ENABLE);
 	USART_ITConfig(uart->usart, USART_IT_RXNE, ENABLE);
@@ -39,6 +39,7 @@ void USART_InitStructure(UART_DATA *uart) {
 	uart->usart_param.USART_WordLength = USART_WordLength_8b;
 	uart->recived_func = uart_dummy;
 	uart->transmited_func = uart_dummy;
+	uart->usart=USART1;
 
 }
 
@@ -55,7 +56,7 @@ void USART_IRQ(UART_DATA *uart) {
 		if (uart->rxcnt > (uart->rx_buffer_size - 2))
 			uart->rxcnt = 0;
 
-		uart->rx_buffer[uart2->rxcnt++] = USART_ReceiveData(uart->usart);
+		uart->rx_buffer[uart->rxcnt++] = USART_ReceiveData(uart->usart);
 
 	}
 
@@ -67,6 +68,7 @@ void USART_IRQ(UART_DATA *uart) {
 			USART_SendData(uart->usart, uart->tx_buffer[uart->txcnt++]);
 		} else {
 			uart->txlen = 0;
+			uart->rxcnt=0;
 			(uart->transmited_func)(uart);
 
 			USART_ITConfig(uart->usart, USART_IT_RXNE, ENABLE);
@@ -81,7 +83,7 @@ void USART_IRQ(UART_DATA *uart) {
 
 void USART_TIMER_IRQ(UART_DATA *uart) {
 	if (uart->rxtimer++ > uart->delay)
-		if (uart.rxcnt > 0) {
+		if (uart->rxcnt > 0) {
 			//окончание приема пакета
 			(uart->recived_func)(uart);
 		} else

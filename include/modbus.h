@@ -42,13 +42,13 @@ extern unsigned char *modbus_addr;
 /***************************************************************************//**
  * Declare function prototypes
  ******************************************************************************/
-void SetupUSART2(void);
+
 void MODBUS_SLAVE(UART_DATA *MODBUS);
 unsigned int Crc16(unsigned char *ptrByte, int byte_cnt);
 void TX_03_04(UART_DATA *MODBUS);
 void TX_06(UART_DATA *MODBUS);
 void TX_EXCEPTION(UART_DATA *MODBUS,unsigned char error_type);
-void main_modbus(void);
+void MODBUS_receiver_on(UART_DATA *uart);
 void TestWriteVarEEPROM(unsigned int temp);
 
 #endif /* __MODBUS_H */

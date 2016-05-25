@@ -2,27 +2,14 @@
 //extern  int res_table[OBJ_SZ];
 
 
-
-
-
-
 //***************************************************************************
-//send data from uart2 if data is ready
-//***************************************************************************
-void net_tx2(UART_DATA *uart)
+// *  MODBUS_receiver_on
+// **************************************************************************
+void MODBUS_receiver_on(UART_DATA *uart)
 {
-  if((uart->txlen>0)&(uart->txcnt==0))
-  {
-	    USART_ITConfig(USART2, USART_IT_RXNE, DISABLE);
-	    USART_ITConfig(USART2, USART_IT_TC, ENABLE);
-
-	    GPIO_SetBits(GPIOA,GPIO_Pin_4); //переключаем на передачу
-
-	  	USART_SendData(USART2, uart->buffer[uart->txcnt++]);
-  }
+	GPIO_ResetBits(GPIOA,GPIO_Pin_4); //переключаем на прием
 
 }
-
 
 
 //***************************************************************************
@@ -41,36 +28,6 @@ void TIM7_IRQHandler(void)
 	USART_TIMER_IRQ(&uart2);
 	TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
 }
-
-//***************************************************************************
-//main()
-//***************************************************************************
-void main_modbus(void)
-{
-
-
-
-
-     //Main loop
-
-    	if(uart2.rxgap==1)
-    	 {
-     	 MODBUS_SLAVE(&uart2);
-    	 net_tx2(&uart2);
-    	 }
-
-
-}
-
-
-
-
-
-
-
-
-
-//***********************************************************************
 
 
 
@@ -92,7 +49,7 @@ void main_modbus(void)
 
 
          //choosing function
-	     switch(MODBUS->buffer[1])
+	     switch(MODBUS->rx_buffer[1])
        {
        case 3:
        TX_03_04(MODBUS);
@@ -112,18 +69,20 @@ void main_modbus(void)
 	   }
 
 	     //adding CRC16 to reply
-   	     tmp=Crc16(MODBUS->buffer,MODBUS->txlen-2);
-         MODBUS->buffer[MODBUS->txlen-2]=tmp;
-         MODBUS->buffer[MODBUS->txlen-1]=tmp>>8;
+   	     tmp=Crc16(MODBUS->tx_buffer,MODBUS->txlen-2);
+         MODBUS->tx_buffer[MODBUS->txlen-2]=tmp;
+         MODBUS->tx_buffer[MODBUS->txlen-1]=tmp>>8;
          MODBUS->txcnt=0;
+         GPIO_SetBits(GPIOA,GPIO_Pin_4); //переключаем на передачу
+         uart_tx(&uart2);
+
 
 	}
 
  }
 
-	  MODBUS->rxgap=0;
+
 	  MODBUS->rxcnt=0;
-	  MODBUS->rxtimer=0xFFFF;
 
 }
 
@@ -141,10 +100,10 @@ int tmp_val,tmp_val_pos;
    //MODBUS->buffer[2] = data byte count
 
     //2-3  - starting address
-   tmp=((MODBUS->buffer[2]<<8)+MODBUS->buffer[3]);
+   tmp=((MODBUS->rx_buffer[2]<<8)+MODBUS->rx_buffer[3]);
 
    //4-5 - number of registers
-   tmp1=((MODBUS->buffer[4]<<8)+MODBUS->buffer[5]);
+   tmp1=((MODBUS->rx_buffer[4]<<8)+MODBUS->rx_buffer[5]);
 
    //default answer length if error
    n=3;
@@ -159,18 +118,18 @@ int tmp_val,tmp_val_pos;
     if(tmp_val<0)
     {
     tmp_val_pos=tmp_val;
-    MODBUS->buffer[n]=(tmp_val_pos>>8)|0b10000000;
-    MODBUS->buffer[n+1]=tmp_val_pos;
+    MODBUS->rx_buffer[n]=(tmp_val_pos>>8)|0b10000000;
+    MODBUS->rx_buffer[n+1]=tmp_val_pos;
     }
     else
     {
-     MODBUS->buffer[n]=tmp_val>>8;
-     MODBUS->buffer[n+1]=tmp_val;
+     MODBUS->rx_buffer[n]=tmp_val>>8;
+     MODBUS->rx_buffer[n+1]=tmp_val;
     }
      n=n+2;
     }
 
-     MODBUS->buffer[2]=m*2; //byte count
+     MODBUS->rx_buffer[2]=m*2; //byte count
      MODBUS->txlen=m*2+5; //responce length
 
    }
@@ -193,14 +152,14 @@ void TX_06(UART_DATA *MODBUS)
 
    //2-3  - adress   , 4-5 - value
 
-   tmp=((MODBUS->buffer[2]<<8)+MODBUS->buffer[3]); //adress
+   tmp=((MODBUS->rx_buffer[2]<<8)+MODBUS->rx_buffer[3]); //adress
 
    //MODBUS->buffer[2]  - byte count a same as in rx query
 
    if(tmp<OBJ_SZ)
    {
     MODBUS->txlen=MODBUS->rxcnt; //responce length
-    res_table[tmp]=(MODBUS->buffer[4]<<8)+MODBUS->buffer[5];
+    res_table[tmp]=(MODBUS->rx_buffer[4]<<8)+MODBUS->rx_buffer[5];
     TestWriteVarEEPROM(tmp); //проверим не нужно ли записать этот регистр в еепром
 
    }
@@ -220,7 +179,7 @@ void TX_06(UART_DATA *MODBUS)
 void TX_EXCEPTION(UART_DATA *MODBUS,unsigned char error_type)
 {
  //illegal operation
-  MODBUS->buffer[2]=error_type; //exception
+  MODBUS->rx_buffer[2]=error_type; //exception
   MODBUS->txlen=5; //responce length
 }
 

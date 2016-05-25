@@ -4,7 +4,7 @@ UART_DATA uart1;
 UART_DATA uart2;
 unsigned char uart_mobdus_buff[256];
 unsigned char uart_rfid_buff[16];
-
+unsigned char *modbus_addr=(unsigned char *)&res_table[MBReg_AdrrModbus];
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
 uint16_t VirtAddVarTab[NumbOfVar]={
 		1000,
@@ -257,6 +257,28 @@ void initial(void) {
  	  TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
 
 
+		//uart ports
+		USART_InitStructure(&uart1);
+		USART_InitStructure(&uart2);
+		uart1.usart_param.USART_BaudRate=9600;
+		uart1.rx_buffer=uart_rfid_buff;
+		uart1.tx_buffer=uart_rfid_buff;
+		uart1.rx_buffer_size=16;
+		uart1.tx_buffer_size=16;
+
+		uart2.rx_buffer=uart_mobdus_buff;
+		uart2.tx_buffer=uart_mobdus_buff;
+		uart2.recived_func=MODBUS_SLAVE;
+		uart2.transmited_func=MODBUS_receiver_on;
+
+		uart2.rx_buffer_size=250;
+		uart2.tx_buffer_size=250;
+		uart2.usart=USART2;
+
+		 //rx tx modbus
+
+
+
 
 
 
@@ -295,51 +317,12 @@ void initial(void) {
 	  NVIC_Init(&NVIC_InitStructure);
 
 
-	  /* Разрешаем прерывания таймера TIM1 */
-	  	  NVIC_EnableIRQ(TIM1_CC_IRQn);
 
 
 	  TIM_ITConfig(TIM7,TIM_IT_Update,ENABLE);
 
 
-		//Инициализация таймера TIM3 для шима
-		/* Настраиваем предделитель */
-	      TIM_TimeBaseStructInit(&base_timer);
-			base_timer.TIM_Prescaler = 0;
-			base_timer.TIM_Period=MaxPWM;
-			base_timer.TIM_CounterMode=TIM_CounterMode_Up;
-			base_timer.TIM_ClockDivision=TIM_CKD_DIV1;
-			base_timer.TIM_RepetitionCounter=0;
-			TIM_TimeBaseInit(TIM3, &base_timer);
 
-
-		    TIM_OCStructInit(&timer_oc);
-			timer_oc.TIM_OCMode=TIM_OCMode_PWM1;
-			timer_oc.TIM_OutputState=TIM_OutputState_Enable;
-			timer_oc.TIM_Pulse=0;
-			timer_oc.TIM_OCPolarity=TIM_OCPolarity_High;
-			timer_oc.TIM_OCIdleState=TIM_OCIdleState_Reset;
-			TIM_OC1Init(TIM3,&timer_oc);
-	//		TIM_OC2Init(TIM3,&timer_oc);
-			//timer_oc.TIM_Pulse=200;
-			//timer_oc.TIM_OutputState=TIM_OutputState_Disable;
-			//TIM_OC4Init(TIM3,&timer_oc);
-
-/*
-	//Разрешаем таймеру использовать ШИМ 1*/
-	TIM3->CCER |= (TIM_CCER_CC1E|TIM_CCER_CC4E);
-	TIM3->CCR1 =MotorSpeedPWM;
-	TIM3->PSC = 0; //prescaller
-	TIM3->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1; //PWM mode
-	TIM3->CCMR1 &= ~(TIM_CCMR1_OC1M_0| TIM_CCMR1_OC1PE);
-	TIM3->CCMR2 |=TIM_CCMR2_OC4M_2|TIM_CCMR2_OC4M_1;
-	TIM3->CR1 &=~ TIM_CR1_ARPE;
-	TIM3->ARR = MaxPWM; //period
-	//TIM3->CCER&=~TIM_CCER_CC1P;			   //нормальная полярность
-	TIM3->CCER |= TIM_CCER_CC1P; //обратная полярность
-	TIM3->CCR4 =200;  //точка измерения тока и напряжения
-	//Запускаем PWM
-	TIM3->CR1 |= TIM_CR1_CEN;
 	delay_ms(1);
 
 
@@ -374,30 +357,11 @@ void initial(void) {
 
 
 		delay_ms(1);
-		//uart ports
-		USART_InitStructure(&uart1);
-		USART_InitStructure(&uart2);
-		uart1.usart_param.USART_BaudRate=9600;
-		uart1.rx_buffer=uart_rfid_buff;
-		uart1.tx_buffer=uart_rfid_buff;
-		uart1.rx_buffer_size=16;
-		uart1.tx_buffer_size=16;
 
-		uart2.rx_buffer=uart_mobdus_buff;
-		uart2.tx_buffer=uart_mobdus_buff;
-		uart2.recived_func=MODBUS_SLAVE;
-		uart2.rx_buffer_size=256;
-		uart2.tx_buffer_size=256;
+		USART_Initial(&uart1);
+		USART_Initial(&uart2);
 
-		 //rx tx modbus
-
-		GPIO_ResetBits(GPIOA,GPIO_Pin_4);
-
-		USART_Init(&uart1);
-		USART_Init(&uart2);
-
-
-
+		uart_rx(&uart2);
 
 
 
@@ -454,7 +418,6 @@ void InitVariable(void)
 
 	    	EE_ReadVariable(MBReg_AdrrModbus,&TempVar);
    	    		res_table[MBReg_AdrrModbus]=TempVar;
-   	    	SET_PAR[0]=TempVar;//modbus address
 			EE_ReadVariable(MBReg_Cur_zero_offset,&TempVar);
 				res_table[MBReg_Cur_zero_offset]=TempVar;
 			EE_ReadVariable(MBReg_Cur_gain,&TempVar);
@@ -490,7 +453,6 @@ int main(void) {
 
     while(1)
 	{
-    	main_modbus();
     	Sensor_Up=ADC1->JDR4*1.71;
     	//Sensor_Up=ADC1->JDR3;
     	Densor_Imotor=((int)(ADC1->JDR3)-Cur_zero_offset)*Cur_gain/200; //divided on 200 because there's sold 4 wires

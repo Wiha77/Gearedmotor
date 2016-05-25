@@ -19,12 +19,12 @@ unsigned char rxcnt;
 unsigned char txcnt;
 unsigned char txlen;
 unsigned char delay;  //number symbols for stopping to receive
-void (* recived_func)(UART_DATA *uart);
-void (* transmited_func)(UART_DATA *uart);
+void (* recived_func)(void *uart);
+void (* transmited_func)(void *uart);
 } UART_DATA;
 
 void USART_InitStructure(UART_DATA *uart);
-void USART_Init(UART_DATA *uart);
+void USART_Initial(UART_DATA *uart);
 void USART_IRQ(UART_DATA *uart);
 void USART_TIMER_IRQ(UART_DATA *uart);
 void uart_tx(UART_DATA *uart);
