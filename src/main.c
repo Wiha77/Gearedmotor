@@ -11,7 +11,37 @@ uint16_t VirtAddVarTab[NumbOfVar]={
 		 MBReg_AdrrModbus,
 		 MBReg_Cur_zero_offset,
 		 MBReg_Cur_gain,
-		 MBReg_CardsData
+		 MBReg_CardsData_Save_0,
+		 MBReg_CardsData_Save_1,
+		 MBReg_CardsData_Save_2,
+		 MBReg_CardsData_Save_3,
+		 MBReg_CardsData_Save_4,
+		 MBReg_CardsData_Save_5,
+		 MBReg_CardsData_Save_6,
+		 MBReg_CardsData_Save_7,
+		 MBReg_CardsData_Save_8,
+		 MBReg_CardsData_Save_9,
+		 MBReg_CardsData_Save_10,
+		 MBReg_CardsData_Save_11,
+		 MBReg_CardsData_Save_12,
+		 MBReg_CardsData_Save_13,
+		 MBReg_CardsData_Save_14,
+		 MBReg_CardsData_Save_15,
+		 MBReg_CardsData_Save_16,
+		 MBReg_CardsData_Save_17,
+		 MBReg_CardsData_Save_18,
+		 MBReg_CardsData_Save_19,
+		 MBReg_CardsData_Save_20,
+		 MBReg_CardsData_Save_21,
+		 MBReg_CardsData_Save_22,
+		 MBReg_CardsData_Save_23,
+		 MBReg_CardsData_Save_24,
+		 MBReg_CardsData_Save_25,
+		 MBReg_CardsData_Save_26,
+		 MBReg_CardsData_Save_27,
+		 MBReg_CardsData_Save_28,
+		 MBReg_CardsData_Save_29
+
 		 };
 
 
@@ -20,6 +50,8 @@ uint16_t VirtAddVarTab[NumbOfVar]={
 ErrorStatus  		HSEStartUpStatus;
 FLASH_Status 		FlashStatus;
 uint16_t 			VarValue = 0;
+uint16_t 			CountOpenDoor=0;
+
 
 #define SensorBitD1   		GPIO_Pin_3
 #define SensorPortD1		GPIOB
@@ -40,18 +72,7 @@ uint16_t 			VarValue = 0;
 #define PWMRegBack  		TIM3->CCR1
 
 
-// биты командных флажков CommandFlags
-#define ComFlag_Door				0x0001		//
-#define ComFlag_Gate			    0x0002		//
-#define ComFlag_Light	    		0x0004		//
 
-
-// Биты флажков состояния StateFlags
-#define StateFlag_Door				0x0001    	//
-#define StateFlag_Gate          	0x0002		//
-#define StateFlag_ifCard			0x0004		//
-
-#define StateFlag_Reset				0x0200		//
 
 
 
@@ -68,7 +89,11 @@ uint16_t 			VarValue = 0;
 GPIO_InitTypeDef PORT;
 
 
-
+main_open_door(void)
+{
+	CountOpenDoor=1000;
+	CommandFlags&=~ComFlag_Door;
+}
 
 //Функция задержки использует таймер:
 void delay_ms(uint16_t value) {
@@ -85,14 +110,14 @@ void initial(void) {
 	//структура настройки прерываний
 	 NVIC_InitTypeDef NVIC_InitStructure;
 	 TIM_TimeBaseInitTypeDef base_timer;
-	 TIM_OCInitTypeDef timer_oc;
+//	 TIM_OCInitTypeDef timer_oc;
 
 
 	//Включем переферию шина APB1ENR
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN|RCC_APB1ENR_TIM7EN|RCC_APB1Periph_TIM3|RCC_APB1Periph_USART2;
 
 	//Включем переферию шина APB2ENR
-	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN|RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOB|RCC_APB2ENR_TIM16EN|RCC_APB2ENR_ADC1EN|RCC_APB2ENR_AFIOEN|RCC_APB2ENR_TIM1EN;
+	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN|RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOB|RCC_APB2ENR_TIM16EN|RCC_APB2ENR_ADC1EN|RCC_APB2ENR_AFIOEN|RCC_APB2ENR_TIM1EN|RCC_APB2ENR_USART1EN;
 
 
 	//настраиваем портА
@@ -171,8 +196,17 @@ void initial(void) {
 	  	 // usart1 Rx (RFID)
 
 	  PORT.GPIO_Pin = GPIO_Pin_10;
-	  PORT.GPIO_Mode = GPIO_Mode_AIN;
+	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	  GPIO_Init(GPIOA, &PORT);
+
+	  PORT.GPIO_Pin = GPIO_Pin_11;
+	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  GPIO_Init(GPIOA, &PORT);
+
+	  PORT.GPIO_Pin = GPIO_Pin_12;
+	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  GPIO_Init(GPIOA, &PORT);
+
 
 	  	 // usart1 Tx (RFID)
 
@@ -192,8 +226,11 @@ void initial(void) {
 
 
 //неиспользуемые пины
-
-
+     //light
+	  PORT.GPIO_Pin = GPIO_Pin_7;
+	  PORT.GPIO_Mode = GPIO_Mode_Out_PP;
+	  GPIO_Init(GPIOA, &PORT);
+	  GPIO_ResetBits(GPIOA,GPIO_Pin_7);
 
 	  PORT.GPIO_Pin = GPIO_Pin_5;
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
@@ -215,17 +252,34 @@ void initial(void) {
 
 
 	   RCC->CFGR    &= ~RCC_CFGR_ADCPRE;      				//входной делитель 12МГц
-	   ADC1->CR1     =  ADC_CR1_SCAN; 						//ADC_CR1_JEOCIE;       //This bit is set and cleared by software to enable/disable the end of conversion interrupt for
-	   	   	   	   	   	   	   	   	   	   	   	   	   	   	//injected channels.
-	   ADC1->JSQR = 0x342509;    							// инжекционная последовательность 9-8-9-8
-	   ADC1->SQR1    =  0;                    //
-	   ADC1->CR2    |=  ADC_CR2_CAL;          				//запуск калибровки
-	   while (!(ADC1->CR2 & ADC_CR2_CAL)){};  				//ждем окончания калибровки
-	   ADC1->CR2     |=ADC_CR2_JEXTTRIG|ADC_CR2_JEXTSEL_2;    //External trigger conversion mode for injected channels/Timer 3 CC4 event/
+	/*   ADC_InitTypeDef ADC_data;
+
+	   ADC_data.ADC_ContinuousConvMode=DISABLE;
+	   ADC_data.ADC_DataAlign=ADC_DataAlign_Right;
+	   ADC_data.ADC_ExternalTrigConv=ADC_ExternalTrigConv_None;
+	   ADC_data.ADC_Mode=ADC_Mode_Independent;
+	   ADC_data.ADC_NbrOfChannel=2;
+	   ADC_data.ADC_ScanConvMode=ENABLE;
+	   ADC_Init(ADC1,&ADC_data);
+	   ADC_RegularChannelConfig(ADC1,ADC_Channel_8,0,ADC_SampleTime_1Cycles5);
+	   ADC_RegularChannelConfig(ADC1,ADC_Channel_9,1,ADC_SampleTime_1Cycles5);*/
+                //
+	   //инициализация АЦП
 
 
 
-	   ADC1->CR2    |=  ADC_CR2_ADON;         //включить АЦП
+	   	   ADC1->CR1     =  ADC_CR1_SCAN; 						//ADC_CR1_JEOCIE;       //This bit is set and cleared by software to enable/disable the end of conversion interrupt for
+	   	   	   	   	   	   	   	   	   	   	   	   	   	   	   	//injected channels.
+	   	   ADC1->JSQR = 0x342509;    							// инжекционная последовательность 9-8-9-8
+	   	   ADC1->SQR1    =  0;                    //
+	   	   ADC1->CR2    |=  ADC_CR2_CAL;          				//запуск калибровки
+	   	   while (!(ADC1->CR2 & ADC_CR2_CAL)){};  				//ждем окончания калибровки
+	   	   ADC1->CR2     |=ADC_CR2_JEXTTRIG|ADC_CR2_JEXTSEL;    //External trigger conversion mode for injected channels/Timer 3 CC4 event/
+
+
+
+	   	   ADC1->CR2    |=  ADC_CR2_ADON;         //включить АЦП
+
 
 
 
@@ -255,6 +309,8 @@ void initial(void) {
 
  	  /* Разрешаем таймеру генерировать прерывание*/
  	  TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
+ 	    TIM_ClearFlag(TIM16, TIM_FLAG_Update);
+ 	    TIM_Cmd(TIM16, ENABLE);
 
 
 		//uart ports
@@ -265,6 +321,7 @@ void initial(void) {
 		uart1.tx_buffer=uart_rfid_buff;
 		uart1.rx_buffer_size=16;
 		uart1.tx_buffer_size=16;
+		uart1.recived_func=RFID_received;
 
 		uart2.rx_buffer=uart_mobdus_buff;
 		uart2.tx_buffer=uart_mobdus_buff;
@@ -360,7 +417,7 @@ void initial(void) {
 
 		USART_Initial(&uart1);
 		USART_Initial(&uart2);
-
+		uart_rx(&uart1);
 		uart_rx(&uart2);
 
 
@@ -423,6 +480,14 @@ void InitVariable(void)
 			EE_ReadVariable(MBReg_Cur_gain,&TempVar);
 				res_table[MBReg_Cur_gain]=TempVar;
 
+				int i;
+				for(i=0;i<30;i++)
+				{
+					EE_ReadVariable(MBReg_CardsData_Save_0+i,&TempVar);
+						res_table[MBReg_CardsData_Save_0+i]=TempVar;
+
+				}
+
 }
 
 
@@ -430,6 +495,8 @@ void InitVariable(void)
 void SysTick_Handler(void)
 {
 //1mc
+	if(CountOpenDoor)CountOpenDoor--;
+	if(CountOpenDoor==1)CommandFlags|=ComFlag_Door;
 
 }
 int main(void) {
@@ -441,7 +508,7 @@ int main(void) {
 	InitVariable();
 
 	StateFlags|=StateFlag_Reset; // Установим флаг перезапуска программы
-
+	CommandFlags|=ComFlag_Door | ComFlag_Gate;
 // инициализация сторожевого таймера
 	/*
 	IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
@@ -453,10 +520,37 @@ int main(void) {
 
     while(1)
 	{
+
+    	//перенисим состояние датчиков во флаги(датчик сработал когда 0)
+    	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_6)==Bit_RESET )StateFlags|=StateFlag_Door;
+    	else StateFlags&=~StateFlag_Door;
+    	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_7)==Bit_RESET )StateFlags|=StateFlag_Gate;
+    	else StateFlags&=~StateFlag_Gate;
+
+    	if (ComFlag_Door&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_1)) GPIO_SetBits(GPIOA,GPIO_Pin_1);
+    	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_1)) GPIO_ResetBits(GPIOA,GPIO_Pin_1);
+
+    	if (ComFlag_Gate&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_10)) GPIO_SetBits(GPIOB,GPIO_Pin_10);
+    	}else if (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_10)) GPIO_ResetBits(GPIOB,GPIO_Pin_10);
+
+    	if (ComFlag_Light&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7)) GPIO_SetBits(GPIOA,GPIO_Pin_7);
+    	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7)) GPIO_ResetBits(GPIOA,GPIO_Pin_7);
+
+
+
+
+    	if(!(ADC1->CR2&ADC_CR2_JSWSTART))ADC1->CR2     |=ADC_CR2_JSWSTART;
     	Sensor_Up=ADC1->JDR4*1.71;
-    	//Sensor_Up=ADC1->JDR3;
-    	Densor_Imotor=((int)(ADC1->JDR3)-Cur_zero_offset)*Cur_gain/200; //divided on 200 because there's sold 4 wires
+    	//Sensor_Up=ADC1->DR*1.71;;
+
+    	Densor_Imotor=((int16_t)(ADC1->JDR3)-Cur_zero_offset);
     	if (Densor_Imotor<10)Densor_Imotor=0;
+    	Densor_Imotor=    	Densor_Imotor*Cur_gain/800; //divided on 200 because there's sold 4 wires
+    	//Densor_Imotor=((int)(ADC1->DR)-Cur_zero_offset)*Cur_gain/50;
+
 		//delay_ms(1);
 	   //IWDG_ReloadCounter(); //сброс сторожевого таймера
 

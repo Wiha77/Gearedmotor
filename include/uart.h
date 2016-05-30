@@ -7,7 +7,7 @@
 #include "stm32f10x_tim.h"
 
 //uart structure
-typedef struct {
+typedef struct _UART_DATA{
 USART_TypeDef *usart;     //base address usart
 USART_InitTypeDef usart_param;
 unsigned char *rx_buffer;    //buffer for receiving
@@ -19,8 +19,8 @@ unsigned char rxcnt;
 unsigned char txcnt;
 unsigned char txlen;
 unsigned char delay;  //number symbols for stopping to receive
-void (* recived_func)(void *uart);
-void (* transmited_func)(void *uart);
+void (* recived_func)(struct _UART_DATA *uart);
+void (* transmited_func)(struct _UART_DATA *uart);
 } UART_DATA;
 
 void USART_InitStructure(UART_DATA *uart);
