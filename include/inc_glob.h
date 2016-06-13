@@ -19,7 +19,7 @@
 #define ComFlag_Door				0x0001		//
 #define ComFlag_Gate			    0x0002		//
 #define ComFlag_Light	    		0x0004		//
-
+#define ComFlag_IR_Mod	    		0x0008		//
 
 // Биты флажков состояния StateFlags
 #define StateFlag_Door				0x0001    	//

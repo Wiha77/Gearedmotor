@@ -38,12 +38,15 @@ void RFID_received(UART_DATA *uart)
 	char i;
 	unsigned short rezCRC;
 	rfid_CRC16(uart->rx_buffer,&rezCRC,9);
-	if ((uart->rx_buffer[10]==(rezCRC & 0xff)) && (uart->rx_buffer[9]==((rezCRC & 0xff00)>>8)))
+	if ((uart->rxcnt==11) && (uart->rx_buffer[10]==(rezCRC & 0xff)) && (uart->rx_buffer[9]==((rezCRC & 0xff00)>>8)))
 		{
 		res_table[MBReg_CardsData_0]=uart->rx_buffer[3]+uart->rx_buffer[4]*256;
 		res_table[MBReg_CardsData_1]=uart->rx_buffer[5]+uart->rx_buffer[6]*256;
 		res_table[MBReg_CardsData_2]=uart->rx_buffer[7];
-		}
+
+
+
+
 
 	StateFlags|=StateFlag_ifCard;
 	//test open door
@@ -59,7 +62,7 @@ void RFID_received(UART_DATA *uart)
      }
 	}
 
-
+}
 	uart_rx(uart);
 
 

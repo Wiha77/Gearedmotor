@@ -5,6 +5,8 @@ UART_DATA uart2;
 unsigned char uart_mobdus_buff[256];
 unsigned char uart_rfid_buff[16];
 unsigned char *modbus_addr=(unsigned char *)&res_table[MBReg_AdrrModbus];
+unsigned char IR_count;
+
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
 uint16_t VirtAddVarTab[NumbOfVar]={
 		1000,
@@ -110,7 +112,7 @@ void initial(void) {
 	//структура настройки прерываний
 	 NVIC_InitTypeDef NVIC_InitStructure;
 	 TIM_TimeBaseInitTypeDef base_timer;
-//	 TIM_OCInitTypeDef timer_oc;
+	 TIM_OCInitTypeDef timer_oc;
 
 
 	//Включем переферию шина APB1ENR
@@ -313,6 +315,29 @@ void initial(void) {
  	    TIM_Cmd(TIM16, ENABLE);
 
 
+		//Инициализация таймера TIM3 для шима
+		/* Настраиваем предделитель */
+	      TIM_TimeBaseStructInit(&base_timer);
+			base_timer.TIM_Prescaler = 0;
+			base_timer.TIM_Period=631;
+			base_timer.TIM_CounterMode=TIM_CounterMode_Up;
+			base_timer.TIM_ClockDivision=TIM_CKD_DIV1;
+			base_timer.TIM_RepetitionCounter=0;
+			TIM_TimeBaseInit(TIM3, &base_timer);
+
+
+		    TIM_OCStructInit(&timer_oc);
+			timer_oc.TIM_OCMode=TIM_OCMode_PWM1;
+			timer_oc.TIM_OutputState=TIM_OutputState_Enable;
+			timer_oc.TIM_Pulse=300;
+			timer_oc.TIM_OCPolarity=TIM_OCPolarity_High;
+			timer_oc.TIM_OCIdleState=TIM_OCIdleState_Reset;
+			TIM_OC1Init(TIM3,&timer_oc);
+
+
+
+
+
 		//uart ports
 		USART_InitStructure(&uart1);
 		USART_InitStructure(&uart2);
@@ -406,7 +431,7 @@ void initial(void) {
 
 	// Настроим Вывод PA6 (PWM)
 	PORT.GPIO_Pin = (GPIO_Pin_6);
-	PORT.GPIO_Mode = GPIO_Mode_Out_PP;
+	PORT.GPIO_Mode = GPIO_Mode_AF_PP;
 	PORT.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &PORT);
 	  /* Включаем таймер */
@@ -498,10 +523,19 @@ void SysTick_Handler(void)
 	if(CountOpenDoor)CountOpenDoor--;
 	if(CountOpenDoor==1)CommandFlags|=ComFlag_Door;
 
+	if(!IR_count)IR_count=20;
+	IR_count--;
+
+	if ((CommandFlags&ComFlag_IR_Mod) &&(IR_count>10)){
+		if(TIM3->CCR1)TIM3->CCR1=0;
+		else TIM3->CCR1=300;
+
+	} else TIM3->CCR1=0;
+
 }
 int main(void) {
 
-
+	IR_count=0;
 	initial();
 	delay_ms(1);
 	SysTick_Config(24000);
