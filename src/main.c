@@ -8,7 +8,8 @@ extern  int16_t res_table[OBJ_SZ];
 #define  	SonarKalman 100
 uint16_t 	SonarBuf[SonarBufSize];
 uint8_t 	SonarCount = 0;
-
+#define  	IRCount_max 500
+uint8_t 	IRCounter = IRCount_max;
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
 uint16_t VirtAddVarTab[NumbOfVar]={
 		1000,
@@ -121,6 +122,17 @@ u16 CountTimeCurrent=0xffff; // Счетчик для защиты по току
 //Структура настройки портов
 GPIO_InitTypeDef PORT;
 // функция грубого определения значения заполнения
+void EXTI15_10_IRQHandler(void)
+{
+	EXTI_ClearFlag(EXTI_Line10);
+	EXTI_ClearITPendingBit(EXTI_Line10);
+	if (GPIO_ReadInputDataBit(SensorPortD3,SensorBitD3)==Bit_RESET )
+	{
+	IRCounter = IRCount_max;
+	StateFlags&=~StateFlag_D3;
+	}
+}
+
 uint16_t PID_PreMatch (int16_t Turns)
 {
 	uint16_t Rezultat;
@@ -132,6 +144,8 @@ uint16_t PID_PreMatch (int16_t Turns)
 }
 
 // функции управления мотором
+
+
 
 void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 {
@@ -294,7 +308,7 @@ void initial(void) {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN|RCC_APB1ENR_TIM7EN|RCC_APB1Periph_TIM3|RCC_APB1Periph_USART2;
 
 	//Включем переферию шина APB2ENR
-	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN|RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOB|RCC_APB2ENR_TIM16EN|RCC_APB2ENR_ADC1EN|RCC_APB2ENR_AFIOEN|RCC_APB2ENR_TIM1EN;
+	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN|RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOB|RCC_APB2ENR_TIM16EN|RCC_APB2ENR_ADC1EN|RCC_APB2ENR_AFIOEN|RCC_APB2ENR_TIM1EN|RCC_APB2Periph_AFIO;
 
 
 	//настраиваем портА
@@ -656,6 +670,23 @@ void initial(void) {
 	TIM17->CR1 |= TIM_CR1_URS|TIM_CR1_CEN;
 
 
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA,GPIO_PinSource10);
+
+	EXTI_InitTypeDef my_EXTI_InitStruct;
+	EXTI_StructInit(&my_EXTI_InitStruct);
+	my_EXTI_InitStruct.EXTI_Line=EXTI_Line10;
+	my_EXTI_InitStruct.EXTI_LineCmd=ENABLE;
+	EXTI_Init(&my_EXTI_InitStruct);
+
+
+
+	   // Прерывания от PA10;
+	  NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn ;
+	  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	  NVIC_Init(&NVIC_InitStructure);
+
 
 }
 void TIM1_UP_TIM16_IRQHandler(void)
@@ -916,8 +947,8 @@ void RunsCommands(void){
 	else StateFlags&=~StateFlag_D1;
 	if (GPIO_ReadInputDataBit(SensorPortD2,SensorBitD2)==Bit_RESET )StateFlags|=StateFlag_D2;
 	else StateFlags&=~StateFlag_D2;
-	if (GPIO_ReadInputDataBit(SensorPortD3,SensorBitD3)==Bit_RESET )StateFlags|=StateFlag_D3;
-	else StateFlags&=~StateFlag_D3;
+//	if (GPIO_ReadInputDataBit(SensorPortD3,SensorBitD3)==Bit_RESET )StateFlags|=StateFlag_D3;
+//	else StateFlags&=~StateFlag_D3;
 	//перенисим состояние флага направления
 	if (FLAGS&FLAGS_Forvard)StateFlags|=StateFlag_Direction;
 	else StateFlags&=~StateFlag_Direction;
@@ -1016,6 +1047,13 @@ FLAGS|=ComFlag_Izm_Sonar_Loc;
 }
 void SysTick_Handler(void)
 {
+	if(IRCounter!=0)	IRCounter --;
+	else {
+			StateFlags|=StateFlag_D3;
+	}
+
+
+
 
 	if(CountFuseNoTurn!=0)CountFuseNoTurn--;
 	if(WaitForced!=0)WaitForced--;
@@ -1039,7 +1077,7 @@ int main(void) {
 	IWDG_SetPrescaler(IWDG_Prescaler_4);
 	IWDG_SetReload(0xfff);
 
-	IWDG_Enable();
+//	IWDG_Enable();
 
 
     while(1)

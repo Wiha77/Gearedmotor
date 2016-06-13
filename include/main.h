@@ -12,6 +12,7 @@
 #include "onewire.h"
 #include "stm32f10x_iwdg.h"
 #include "stm32f10x_dbgmcu.h"
+#include "stm32f10x_exti.h"
 #define MyDebug 1
 
 //static int res_table[OBJ_SZ];
