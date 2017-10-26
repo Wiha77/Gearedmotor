@@ -1,7 +1,7 @@
 #include "modbus.h"
 //extern  int res_table[OBJ_SZ];
 
-
+//extern s32 PIDintegral;
 
 
 
@@ -293,6 +293,7 @@ void TX_06(UART_DATA *MODBUS)
    {
     MODBUS->txlen=MODBUS->rxcnt; //responce length
     res_table[tmp]=(MODBUS->buffer[4]<<8)+MODBUS->buffer[5];
+ //   if(tmp=MBReg_MotorSpeed)PIDintegral=0;
     TestWriteVarEEPROM(tmp); //проверим не нужно ли записать этот регистр в еепром
 
    }

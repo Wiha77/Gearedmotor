@@ -13,7 +13,7 @@
 unsigned char SET_PAR[SETUP];
 
 
-int16_t res_table[OBJ_SZ];
+s16 res_table[OBJ_SZ];
 //OBJECT ARRAY WHERE READING AND WRITING OCCURS
  typedef enum
  {

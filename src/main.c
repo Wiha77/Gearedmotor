@@ -102,20 +102,19 @@ static u16  CountTimerOW=0;
 static u16 FLAGS=0;
 #define FLAGS_MotorRun 				0x0001 //Включение мотора
 #define FLAGS_StartMotor 			0x0002 //Флаг старта разгона
-#define FLAGS_MotorFors 			0x0004 //Флаг показыввает что идет грубый разгон, дла защиты от заклинивания
 #define ComFlag_Izm_DS18B20_Loc		0x0008 //Локальный бит разрешает измерение температуры датчиком DS18B20
 #define ComFlag_Izm_Sonar_Loc		0x0010 //Локальный бит разрешает измерение сонаром
 #define FLAGS_Forvard				0x0020 //Когда установлен вперед, сброшен назад
 
 //Переменные пида
-int PIDerr;// ошибка
-int PIDPreErr;// прошлая ошибка
+s16 PIDerr;// ошибка
+s16 PIDPreErr;// прошлая ошибка
 u16 PIDt_step;//шаг регулирования, равен периоду оборота вала
 s32 PIDintegral; //Накопленная ошибка
-u16 MotorSpeedTemp ; // Преведущее значение установленной скорости
-u16 WaitForced;  //задержка для разгона движка перед началом работы ПИДа
-u16 PWM_about=0; //Грубое значение
-u16 CountFuseNoTurn=0; // Счетчик для зашиты от остановки якоря
+s16 MotorSpeedTemp ; // Преведущее значение установленной скорости
+s16 WaitForced;  //задержка для разгона движка перед началом работы ПИДа
+//u16 PWM_about=0; //Грубое значение
+s16 CountFuseNoTurn=0; // Счетчик для зашиты от остановки якоря
 
 u16 CountTimeCurrent=0xffff; // Счетчик для защиты по току
 
@@ -147,7 +146,7 @@ uint16_t PID_PreMatch (int16_t Turns)
 
 
 
-void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
+void PIDalg (u16 PIDt_step,s16 Kp,s16 Ki,s16 Kd)
 {
 	PIDrp=9000000/PIDt_step; //кол-во оборотов в минуту
 
@@ -176,9 +175,9 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 
 	Примечание:  параметр t_step  можно исключить из повторяющихся вычислений заранее скорректировав коэффициенты  Ki и Kd  в  t_step  раз.
 	*****************************************************************************/
-	int temp;
+/*	s16 temp;
 	//если был старт то включаем кик старт
-/* */
+
 	if(MotorSpeedTemp>MotorSpeed)temp=MotorSpeedTemp-MotorSpeed;
 	else temp=MotorSpeed-MotorSpeedTemp;
 	if((FLAGS&FLAGS_StartMotor)||(temp>MaxChangSpeed))
@@ -186,31 +185,30 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 		//начало разгона по грубой прикидке
 		FLAGS&=~FLAGS_StartMotor;
 		WaitForced=res_table[MBReg_PID_KickTurns];
-		FLAGS|=FLAGS_MotorFors;
 		PIDintegral=0;
 	}
 	MotorSpeedTemp=MotorSpeed;
-
-	if(WaitForced)
+*/
+/*	if(WaitForced)
 		{
 		//грубый разгон
-		MotorSpeedPWM=res_table[MBReg_PID_KickPWM];
+		MotorSpeedPWM=res_table[MBReg_PID_KickPWM]/res_table[MBReg_PID_KickTurns]*(res_table[MBReg_PID_KickTurns]-WaitForced);
 
 		return;
-		}
-	//вычисляем PWM пропорционально установке скорости
+		} */
+	//ограничиваем пределы  установки скорости
 	if(MotorSpeed>PID_MaxTurns)MotorSpeed=PID_MaxTurns;
 	if(MotorSpeed<PID_MinTurns)MotorSpeed=PID_MinTurns;
 
-	PWM_about=res_table[MBReg_PID_PWM_gain]*MotorSpeed/1024+res_table[MBReg_PID_PWM_zerro];
+//	PWM_about=res_table[MBReg_PID_PWM_gain]*MotorSpeed/1024+res_table[MBReg_PID_PWM_zerro];
 
-	if(FLAGS&FLAGS_MotorFors)
+	/*if(FLAGS&FLAGS_MotorFors)
 			{
 			//здесь защита от заклинивания
 			StateFlags|=StateFlag_NoTurns;
 			MotorSpeedPWM=0;
 			CommandFlags|=ComFlag_STOP;
-			}
+			} */
 
 	//алгоритм ПИД регулятора
 
@@ -230,12 +228,13 @@ void PIDalg (u16 PIDt_step,u16 Kp,u16 Ki,u16 Kd)
 
 
 //вычисляем новое значение ШИМа
-	 proporc=(Kp*PIDerr/1024);
-	 integral=(Ki*PIDintegral/10000*PIDt_step/32768);
-	 diferencial=(Kd*(PIDerr - PIDPreErr)*10/PIDt_step);
+
+	proporc=((double)Kp*(double)PIDerr/(double)1024);
+	 integral=((double)Ki*(double)PIDintegral/(double)10000*(double)PIDt_step/(double)32768);
+	 diferencial=((double)Kd*(double)(PIDerr - PIDPreErr)*10/PIDt_step);
 
 
-	MotorSpeedPWM=PWM_about+proporc+integral+diferencial;   //
+	MotorSpeedPWM=proporc+integral+diferencial;   //
 	if(MotorSpeedPWM<MinPWM)MotorSpeedPWM=PID_MinPWM;
 	if(MotorSpeedPWM>MaxPWM)MotorSpeedPWM=PID_MaxPWM;
 	PIDPreErr=PIDerr;
@@ -266,6 +265,7 @@ void StopMotor (void)
 }
 void ForvardRun (void)
 {
+	PIDintegral=0;
 	// Настроим Вывод PA7 (PWM)
 	PORT.GPIO_Pin = (GPIO_Pin_7);
 	PORT.GPIO_Mode = GPIO_Mode_AF_PP;
@@ -276,9 +276,11 @@ void ForvardRun (void)
 	FLAGS|=FLAGS_MotorRun|FLAGS_StartMotor|FLAGS_Forvard;
 	GPIO_SetBits(PWMPortForvard,PWMBitForvard);
 	CountFuseNoTurn=TimeFuseNoTurn;
+	WaitForced=res_table[MBReg_PID_KickTurns];
 }
 void BackRun (void)
 {
+	PIDintegral=0;
 	// Настроим Вывод PA6 (PWM)
 	PORT.GPIO_Pin = (GPIO_Pin_6);
 	PORT.GPIO_Mode = GPIO_Mode_AF_PP;
@@ -289,6 +291,7 @@ void BackRun (void)
 	FLAGS&=~FLAGS_Forvard;
 	GPIO_SetBits(PWMPortBack,PWMBitBack);
 	CountFuseNoTurn=TimeFuseNoTurn;
+	WaitForced=res_table[MBReg_PID_KickTurns];
 }
 //Функция задержки использует таймер:
 void delay_ms(uint16_t value) {
@@ -774,9 +777,9 @@ static u16 temp;
 	{
 	//прерывание было от мотора
 	 CountFuseNoTurn=TimeFuseNoTurn; //сброс ращиты от остановки якоря
-	 FLAGS&=~FLAGS_MotorFors; //сбросим флаг, мотор не заклинил
+
 	 temp=TIM17->CCR1;
-	 if(temp<900)return;
+	 if(temp<200)return;  //filter of twice interrupt
 	 if(NumberOfTurns!=0)NumberOfTurns--;
 	}
  else {
@@ -907,7 +910,8 @@ void TestMotorCurrent(void)
 	}
 	else CountTimeCurrent=TimeMaxCurrent; //Время для максимального тока
 }
-void RunsCommands(void){
+void RunsCommands(void)
+{
 
 	if(CommandFlags&ComFlag_STOP)
 	{
@@ -955,23 +959,21 @@ void RunsCommands(void){
 
 
 	//проверяем не нужно ли останавливать по достижению датчика
-	if ((CommandFlags&ComFlag_StopIfD1)&&(StateFlags&StateFlag_Motor))
-	if (GPIO_ReadInputDataBit(SensorPortD1,SensorBitD1)==Bit_RESET )
+	if ((CommandFlags&ComFlag_StopIfD1)&&(StateFlags&StateFlag_Motor) && (StateFlags&StateFlag_D1))
 	{
 		StopMotor ();
 		StateFlags|=StateFlag_StopIfD1;
 	}
 
-	if ((CommandFlags&ComFlag_StopIfD2)&&(StateFlags&StateFlag_Motor))
-	if (GPIO_ReadInputDataBit(SensorPortD2,SensorBitD2)==Bit_RESET )
+	if ((CommandFlags&ComFlag_StopIfD2)&&(StateFlags&StateFlag_Motor) && (StateFlags&StateFlag_D2))
 	{
 		StopMotor ();
 		StateFlags|=StateFlag_StopIfD2;
 	}
 
-	if ((CommandFlags&ComFlag_StopIfD3)&&(StateFlags&StateFlag_Motor))
-	if (GPIO_ReadInputDataBit(SensorPortD3,SensorBitD3)==Bit_RESET )
+	if ((CommandFlags&ComFlag_StopIfD3)&&(StateFlags&StateFlag_Motor) && (StateFlags&StateFlag_D3))
 	{
+
 		StopMotor ();
 		StateFlags|=StateFlag_StopIfD3;
 	}
@@ -1055,8 +1057,18 @@ void SysTick_Handler(void)
 
 
 
-	if(CountFuseNoTurn!=0)CountFuseNoTurn--;
-	if(WaitForced!=0)WaitForced--;
+	if((CountFuseNoTurn!=0) ) CountFuseNoTurn--;
+/*	if(WaitForced!=0){
+		int32_t tempST = res_table[MBReg_PID_KickPWM];
+		tempST=tempST *(res_table[MBReg_PID_KickTurns]-WaitForced);
+		MotorSpeedPWM=tempST/res_table[MBReg_PID_KickTurns];
+		 if(FLAGS&FLAGS_MotorRun)
+		 	 {
+			 if(FLAGS&FLAGS_Forvard)PWMRegForvard =MotorSpeedPWM;
+			 else PWMRegBack =MotorSpeedPWM;
+		 	 }
+		WaitForced--;
+	}*/
 	if(CountTimeCurrent!=0)	CountTimeCurrent--;
 	RequestDS18B20();
 }
@@ -1077,7 +1089,7 @@ int main(void) {
 	IWDG_SetPrescaler(IWDG_Prescaler_4);
 	IWDG_SetReload(0xfff);
 
-//	IWDG_Enable();
+	IWDG_Enable();
 
 
     while(1)
@@ -1090,7 +1102,12 @@ int main(void) {
     	//Sensor_Up=ADC1->JDR3;
     	Densor_Imotor=((int)(ADC1->JDR3)-Cur_zero_offset)*Cur_gain/200; //divided on 200 because there's sold 4 wires
     	if (Densor_Imotor<10)Densor_Imotor=0;
-		//delay_ms(1);
+    	if(ADC1->JDR3>4000)
+    			{
+    				CommandFlags|=ComFlag_STOP;
+    				StateFlags|=StateFlag_StopOverCurrent;
+    			}
+    	//delay_ms(1);
 	IWDG_ReloadCounter(); //сброс сторожевого таймера
 
 
