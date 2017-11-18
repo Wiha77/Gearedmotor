@@ -16,17 +16,35 @@
 
 
 // биты командных флажков CommandFlags
-#define ComFlag_Door				0x0001		//
-#define ComFlag_Gate			    0x0002		//
-#define ComFlag_Light	    		0x0004		//
-#define ComFlag_IR_Mod	    		0x0008		//
+#define ComFlag_Light1				0x0001		//
+#define ComFlag_Light2			    0x0002		//
+#define ComFlag_Light3	    		0x0004		//
+#define ComFlag_Light4	    		0x0008		//
+#define ComFlag_K2_Fix				0x0100    	//A10
+#define ComFlag_K4_Fix       	    0x0200		//A8
+#define ComFlag_K6_Fix		    	0x0400		//B3
+#define ComFlag_K7_Fix	   		    0x0800		//B5
+#define ComFlag_K8_Fix		   		0x1000		//B7
+#define ComFlag_D6_Fix		    	0x2000		//
+#define ComFlag_D7_Fix		    	0x4000		//
 
 // Биты флажков состояния StateFlags
-#define StateFlag_Door				0x0001    	//
-#define StateFlag_Gate          	0x0002		//
-#define StateFlag_ifCard			0x0004		//
+#define StateFlag_K2				0x0001    	//
+#define StateFlag_K4          	    0x0002		//
+#define StateFlag_K6			    0x0004		//
+#define StateFlag_K7			    0x0008		//
+#define StateFlag_K8			    0x0010		//
+#define StateFlag_D6			    0x0020		//
+#define StateFlag_D7			    0x0040		//
+#define StateFlag_K2_Fix			0x0100    	//
+#define StateFlag_K4_Fix       	    0x0200		//
+#define StateFlag_K6_Fix		    0x0400		//
+#define StateFlag_K7_Fix		    0x0800		//
+#define StateFlag_K8_Fix		    0x1000		//
+#define StateFlag_D6_Fix		    0x2000		//
+#define StateFlag_D7_Fix		    0x4000		//
 
-#define StateFlag_Reset				0x0200		//
+#define StateFlag_Reset				0x8000		//
 
 #define OBJ_SZ 50
 //OBJECT ARRAY WHERE READING AND WRITING OCCURS
@@ -38,42 +56,7 @@
  MBReg_Sensor_Up,
  MBReg_Densor_Imotor,
  MBReg_Cur_zero_offset,
- MBReg_Cur_gain,
- MBReg_CardsData_0,
- MBReg_CardsData_1,
- MBReg_CardsData_2,
- MBReg_CardsData_Save_0,
- MBReg_CardsData_Save_1,
- MBReg_CardsData_Save_2,
- MBReg_CardsData_Save_3,
- MBReg_CardsData_Save_4,
- MBReg_CardsData_Save_5,
- MBReg_CardsData_Save_6,
- MBReg_CardsData_Save_7,
- MBReg_CardsData_Save_8,
- MBReg_CardsData_Save_9,
- MBReg_CardsData_Save_10,
- MBReg_CardsData_Save_11,
- MBReg_CardsData_Save_12,
- MBReg_CardsData_Save_13,
- MBReg_CardsData_Save_14,
- MBReg_CardsData_Save_15,
- MBReg_CardsData_Save_16,
- MBReg_CardsData_Save_17,
- MBReg_CardsData_Save_18,
- MBReg_CardsData_Save_19,
- MBReg_CardsData_Save_20,
- MBReg_CardsData_Save_21,
- MBReg_CardsData_Save_22,
- MBReg_CardsData_Save_23,
- MBReg_CardsData_Save_24,
- MBReg_CardsData_Save_25,
- MBReg_CardsData_Save_26,
- MBReg_CardsData_Save_27,
- MBReg_CardsData_Save_28,
- MBReg_CardsData_Save_29
-
-
+ MBReg_Cur_gain
 
  }NumberRegModbas;
 

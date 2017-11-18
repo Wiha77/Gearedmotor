@@ -1,48 +1,19 @@
 #include "main.h"
 
-UART_DATA uart1;
+//UART_DATA uart1;
 UART_DATA uart2;
 unsigned char uart_mobdus_buff[256];
-unsigned char uart_rfid_buff[16];
+//unsigned char uart_rfid_buff[16];
 unsigned char *modbus_addr=(unsigned char *)&res_table[MBReg_AdrrModbus];
-unsigned char IR_count;
+;
 
 /* Virtual address defined by the user: 0xFFFF value is prohibited */
 uint16_t VirtAddVarTab[NumbOfVar]={
 		1000,
 		 MBReg_AdrrModbus,
 		 MBReg_Cur_zero_offset,
-		 MBReg_Cur_gain,
-		 MBReg_CardsData_Save_0,
-		 MBReg_CardsData_Save_1,
-		 MBReg_CardsData_Save_2,
-		 MBReg_CardsData_Save_3,
-		 MBReg_CardsData_Save_4,
-		 MBReg_CardsData_Save_5,
-		 MBReg_CardsData_Save_6,
-		 MBReg_CardsData_Save_7,
-		 MBReg_CardsData_Save_8,
-		 MBReg_CardsData_Save_9,
-		 MBReg_CardsData_Save_10,
-		 MBReg_CardsData_Save_11,
-		 MBReg_CardsData_Save_12,
-		 MBReg_CardsData_Save_13,
-		 MBReg_CardsData_Save_14,
-		 MBReg_CardsData_Save_15,
-		 MBReg_CardsData_Save_16,
-		 MBReg_CardsData_Save_17,
-		 MBReg_CardsData_Save_18,
-		 MBReg_CardsData_Save_19,
-		 MBReg_CardsData_Save_20,
-		 MBReg_CardsData_Save_21,
-		 MBReg_CardsData_Save_22,
-		 MBReg_CardsData_Save_23,
-		 MBReg_CardsData_Save_24,
-		 MBReg_CardsData_Save_25,
-		 MBReg_CardsData_Save_26,
-		 MBReg_CardsData_Save_27,
-		 MBReg_CardsData_Save_28,
-		 MBReg_CardsData_Save_29
+		 MBReg_Cur_gain
+
 
 		 };
 
@@ -52,7 +23,7 @@ uint16_t VirtAddVarTab[NumbOfVar]={
 ErrorStatus  		HSEStartUpStatus;
 FLASH_Status 		FlashStatus;
 uint16_t 			VarValue = 0;
-uint16_t 			CountOpenDoor=0;
+
 
 
 #define SensorBitD1   		GPIO_Pin_3
@@ -91,11 +62,6 @@ uint16_t 			CountOpenDoor=0;
 GPIO_InitTypeDef PORT;
 
 
-main_open_door(void)
-{
-	CountOpenDoor=1000;
-	CommandFlags&=~ComFlag_Door;
-}
 
 //Функция задержки использует таймер:
 void delay_ms(uint16_t value) {
@@ -163,7 +129,7 @@ void initial(void) {
 // отключаем jtag
 	  AFIO->MAPR|=AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
-	  //R6
+	  //контакт 6  R6
 	  PORT.GPIO_Pin = GPIO_Pin_3;
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOB, &PORT);
@@ -176,7 +142,7 @@ void initial(void) {
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOA, &PORT);
 
-	  //R7
+	  //контакт 7   R7
 	  PORT.GPIO_Pin = GPIO_Pin_5;
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOB, &PORT);
@@ -185,36 +151,61 @@ void initial(void) {
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOB, &PORT);
 
-	  //Trig
+	  //контакт 8   R8//Trig
 	  PORT.GPIO_Pin = GPIO_Pin_7;
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOB, &PORT);
 
-	  //PORT.GPIO_Pin = GPIO_Pin_8;
-	  //PORT.GPIO_Mode = GPIO_Mode_AF_PP;
-	  //GPIO_Init(GPIOB, &PORT);
+	  PORT.GPIO_Pin = GPIO_Pin_8;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
+	  GPIO_Init(GPIOB, &PORT);
 
 
-	  	 // usart1 Rx (RFID)
+	  	 // контакт 2 - РА10,РА11,РА12 ; usart1 RX
 
 	  PORT.GPIO_Pin = GPIO_Pin_10;
-	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOA, &PORT);
 
 	  PORT.GPIO_Pin = GPIO_Pin_11;
-	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOA, &PORT);
 
 	  PORT.GPIO_Pin = GPIO_Pin_12;
-	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
 	  GPIO_Init(GPIOA, &PORT);
 
 
-	  	 // usart1 Tx (RFID)
 
+
+
+
+	  	 // контакт 4 - РА8,РА9,PB14,PB15 ; usart1 RX
+
+
+	  PORT.GPIO_Pin = GPIO_Pin_8;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
+	  GPIO_Init(GPIOA, &PORT);
+
+	  PORT.GPIO_Pin = GPIO_Pin_9;
+	  PORT.GPIO_Mode = GPIO_Mode_IPU;
+	  GPIO_Init(GPIOA, &PORT);
+
+	  PORT.GPIO_Pin = GPIO_Pin_14;
+	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  GPIO_Init(GPIOB, &PORT);
+
+	  PORT.GPIO_Pin = GPIO_Pin_15;
+	  PORT.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	  GPIO_Init(GPIOB, &PORT);
+
+	  // usart1 Tx (RFID)
+
+/*
 	  PORT.GPIO_Pin = GPIO_Pin_9;
 	  PORT.GPIO_Mode = GPIO_Mode_AF_PP;
 	  GPIO_Init(GPIOA, &PORT);
+*/
 
 
 
@@ -229,10 +220,12 @@ void initial(void) {
 
 //неиспользуемые пины
      //light
+/*
 	  PORT.GPIO_Pin = GPIO_Pin_7;
 	  PORT.GPIO_Mode = GPIO_Mode_Out_PP;
 	  GPIO_Init(GPIOA, &PORT);
 	  GPIO_ResetBits(GPIOA,GPIO_Pin_7);
+*/
 
 	  PORT.GPIO_Pin = GPIO_Pin_5;
 	  PORT.GPIO_Mode = GPIO_Mode_IPU;
@@ -303,20 +296,20 @@ void initial(void) {
     TIM_Cmd(TIM7, ENABLE);
 
     //Инициализация таймера TIM16 для определения конца передачи RFID
-    /**/
+    /*
       TIM_TimeBaseStructInit(&base_timer);
       base_timer.TIM_Prescaler = 24 - 1;
       base_timer.TIM_Period = 1000;
       TIM_TimeBaseInit(TIM16, &base_timer);
-
- 	  /* Разрешаем таймеру генерировать прерывание*/
+*/
+ 	  /* Разрешаем таймеру генерировать прерывание
  	  TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
  	    TIM_ClearFlag(TIM16, TIM_FLAG_Update);
  	    TIM_Cmd(TIM16, ENABLE);
-
+*/
 
 		//Инициализация таймера TIM3 для шима
-		/* Настраиваем предделитель */
+		/* Настраиваем предделитель
 	      TIM_TimeBaseStructInit(&base_timer);
 			base_timer.TIM_Prescaler = 0;
 			base_timer.TIM_Period=631;
@@ -333,21 +326,21 @@ void initial(void) {
 			timer_oc.TIM_OCPolarity=TIM_OCPolarity_High;
 			timer_oc.TIM_OCIdleState=TIM_OCIdleState_Reset;
 			TIM_OC1Init(TIM3,&timer_oc);
-
+*/
 
 
 
 
 		//uart ports
-		USART_InitStructure(&uart1);
+	//	USART_InitStructure(&uart1);
 		USART_InitStructure(&uart2);
-		uart1.usart_param.USART_BaudRate=9600;
+	/*	uart1.usart_param.USART_BaudRate=9600;
 		uart1.rx_buffer=uart_rfid_buff;
 		uart1.tx_buffer=uart_rfid_buff;
 		uart1.rx_buffer_size=16;
 		uart1.tx_buffer_size=16;
 		uart1.recived_func=RFID_received;
-
+*/
 		uart2.rx_buffer=uart_mobdus_buff;
 		uart2.tx_buffer=uart_mobdus_buff;
 		uart2.recived_func=MODBUS_SLAVE;
@@ -364,13 +357,13 @@ void initial(void) {
 
 
 
-	  /* Enable the USART1 Interrupt */
+	  /* Enable the USART1 Interrupt
 	  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
 	  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 	  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
 	  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	  NVIC_Init(&NVIC_InitStructure);
-
+*/
 
 	  /* Enable the USART2 Interrupt */
 	  NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
@@ -392,12 +385,13 @@ void initial(void) {
 
 
 	   // Прерывания от TIM16;
+	  /*
 	  NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_TIM16_IRQn ;
 	  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	  NVIC_Init(&NVIC_InitStructure);
-
+*/
 
 
 
@@ -431,7 +425,7 @@ void initial(void) {
 
 	// Настроим Вывод PA6 (PWM)
 	PORT.GPIO_Pin = (GPIO_Pin_6);
-	PORT.GPIO_Mode = GPIO_Mode_AF_PP;
+	PORT.GPIO_Mode = GPIO_Mode_Out_PP;
 	PORT.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &PORT);
 	  /* Включаем таймер */
@@ -440,9 +434,9 @@ void initial(void) {
 
 		delay_ms(1);
 
-		USART_Initial(&uart1);
+	//	USART_Initial(&uart1);
 		USART_Initial(&uart2);
-		uart_rx(&uart1);
+	//	uart_rx(&uart1);
 		uart_rx(&uart2);
 
 
@@ -489,7 +483,7 @@ void InitVariable(void)
 	    		  // Инициализация еепром по умолчанию
 	    		 if (EE_Format()!= FLASH_COMPLETE )FatallError();
 	    		 if (EE_WriteVariable(1000, 0xeeee)!= FLASH_COMPLETE )FatallError ();
-	    		 if (EE_WriteVariable(MBReg_AdrrModbus, 2)!= FLASH_COMPLETE )FatallError (); //модбус адресс по умолчанию
+	    		 if (EE_WriteVariable(MBReg_AdrrModbus, 3)!= FLASH_COMPLETE )FatallError (); //модбус адресс по умолчанию
 	    		 if (EE_WriteVariable(MBReg_Cur_zero_offset, 0)!= FLASH_COMPLETE )FatallError ();
 	    		 if (EE_WriteVariable(MBReg_Cur_gain, 920)!= FLASH_COMPLETE )FatallError ();
 
@@ -505,6 +499,7 @@ void InitVariable(void)
 			EE_ReadVariable(MBReg_Cur_gain,&TempVar);
 				res_table[MBReg_Cur_gain]=TempVar;
 
+/*
 				int i;
 				for(i=0;i<30;i++)
 				{
@@ -512,6 +507,7 @@ void InitVariable(void)
 						res_table[MBReg_CardsData_Save_0+i]=TempVar;
 
 				}
+*/
 
 }
 
@@ -520,29 +516,33 @@ void InitVariable(void)
 void SysTick_Handler(void)
 {
 //1mc
+/*
 	if(CountOpenDoor)CountOpenDoor--;
 	if(CountOpenDoor==1)CommandFlags|=ComFlag_Door;
+*/
 
-	if(!IR_count)IR_count=20;
-	IR_count--;
+//	if(!IR_count)IR_count=20;
+//	IR_count--;
 
+/*
 	if ((CommandFlags&ComFlag_IR_Mod) &&(IR_count>10)){
 		if(TIM3->CCR1)TIM3->CCR1=0;
 		else TIM3->CCR1=300;
 
 	} else TIM3->CCR1=0;
+*/
 
 }
 int main(void) {
 
-	IR_count=0;
+//	IR_count=0;
 	initial();
 	delay_ms(1);
 	SysTick_Config(24000);
 	InitVariable();
 
 	StateFlags|=StateFlag_Reset; // Установим флаг перезапуска программы
-	CommandFlags|=ComFlag_Door | ComFlag_Gate;
+//	CommandFlags|=ComFlag_Door | ComFlag_Gate;
 // инициализация сторожевого таймера
 	/*
 	IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
@@ -555,6 +555,7 @@ int main(void) {
     while(1)
 	{
 
+/*
     	//перенисим состояние датчиков во флаги(датчик сработал когда 0)
     	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_6)==Bit_RESET )StateFlags|=StateFlag_Door;
     	else StateFlags&=~StateFlag_Door;
@@ -572,6 +573,56 @@ int main(void) {
     	if (ComFlag_Light&CommandFlags){
     		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7)) GPIO_SetBits(GPIOA,GPIO_Pin_7);
     	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7)) GPIO_ResetBits(GPIOA,GPIO_Pin_7);
+*/
+
+    	if (ComFlag_Light1&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_6))
+    			GPIO_SetBits(GPIOA,GPIO_Pin_6);
+    	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_6))
+    		GPIO_ResetBits(GPIOA,GPIO_Pin_6);
+
+    	if (ComFlag_Light2&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7))
+    			GPIO_SetBits(GPIOA,GPIO_Pin_7);
+    	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_7))
+    		GPIO_ResetBits(GPIOA,GPIO_Pin_7);
+
+    	if (ComFlag_Light3&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_10)) GPIO_SetBits(GPIOB,GPIO_Pin_10);
+    	}else if (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_10)) GPIO_ResetBits(GPIOB,GPIO_Pin_10);
+
+
+    	if (ComFlag_Light4&CommandFlags){
+    		if (!GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_1)) GPIO_SetBits(GPIOA,GPIO_Pin_1);
+    	}else if (GPIO_ReadOutputDataBit(GPIOA,GPIO_Pin_1)) GPIO_ResetBits(GPIOA,GPIO_Pin_1);
+
+
+
+    	if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_10) == Bit_SET)StateFlags |= StateFlag_K2;
+    	else StateFlags &= ~StateFlag_K2;
+        if ((ComFlag_K2_Fix & CommandFlags) && (StateFlags & StateFlag_K2))StateFlags |= StateFlag_K2_Fix;
+        if (!(ComFlag_K2_Fix & CommandFlags) && !(StateFlags & StateFlag_K2))StateFlags |= StateFlag_K2_Fix;
+
+    	if (GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_8) == Bit_SET)StateFlags |= StateFlag_K4;
+    	else StateFlags &= ~StateFlag_K4;
+        if ((ComFlag_K4_Fix & CommandFlags) && (StateFlags & StateFlag_K4))StateFlags |= StateFlag_K4_Fix;
+        if (!(ComFlag_K4_Fix & CommandFlags) && !(StateFlags & StateFlag_K4))StateFlags |= StateFlag_K4_Fix;
+
+    	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_3) == Bit_SET)StateFlags |= StateFlag_K6;
+    	else StateFlags &= ~StateFlag_K6;
+        if ((ComFlag_K6_Fix & CommandFlags) && (StateFlags & StateFlag_K6))StateFlags |= StateFlag_K6_Fix;
+        if (!(ComFlag_K6_Fix & CommandFlags) && !(StateFlags & StateFlag_K6))StateFlags |= StateFlag_K6_Fix;
+
+    	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_5) == Bit_SET)StateFlags |= StateFlag_K7;
+    	else StateFlags &= ~StateFlag_K7;
+        if ((ComFlag_K7_Fix & CommandFlags) && (StateFlags & StateFlag_K7))StateFlags |= StateFlag_K7_Fix;
+        if (!(ComFlag_K7_Fix & CommandFlags) && !(StateFlags & StateFlag_K7))StateFlags |= StateFlag_K7_Fix;
+
+    	if (GPIO_ReadInputDataBit(GPIOB,GPIO_Pin_7) == Bit_SET)StateFlags |= StateFlag_K8;
+    	else StateFlags &= ~StateFlag_K8;
+        if ((ComFlag_K8_Fix & CommandFlags) && (StateFlags & StateFlag_K8))StateFlags |= StateFlag_K8_Fix;
+        if (!(ComFlag_K8_Fix & CommandFlags) && !(StateFlags & StateFlag_K8))StateFlags |= StateFlag_K8_Fix;
+
 
 
 
@@ -582,7 +633,7 @@ int main(void) {
 
     	Densor_Imotor=((int16_t)(ADC1->JDR3)-Cur_zero_offset);
     	if (Densor_Imotor<10)Densor_Imotor=0;
-    	Densor_Imotor=    	Densor_Imotor*Cur_gain/800; //divided on 200 because there's sold 4 wires
+    	Densor_Imotor=    	Densor_Imotor*Cur_gain/50; //divided on 200 because there's sold 4 wires
     	//Densor_Imotor=((int)(ADC1->DR)-Cur_zero_offset)*Cur_gain/50;
 
 		//delay_ms(1);

@@ -12,7 +12,7 @@
 #include "modbus.h"
 #include "stm32f10x_iwdg.h"
 #include "stm32f10x_dbgmcu.h"
-#include "rfid.h"
+//#include "rfid.h"
 #define MyDebug 1
 
 
